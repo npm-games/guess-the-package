@@ -1,4 +1,5 @@
 {
+  "name": "guess-the-package",
   "private": true,
   "type": "module",
   "imports": {
