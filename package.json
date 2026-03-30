@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#layout": "./src/layouts/Layout.astro"
+    "#layout": "./src/layouts/Layout.astro",
+    "#styles": "./src/styles/global.css",
+    "#app": "./src/components/App.tsx",
+    "#lib/*": "./src/lib/*.ts"
   },
   "scripts": {
     "lint": "biome check",
