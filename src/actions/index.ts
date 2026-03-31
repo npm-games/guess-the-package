@@ -15,17 +15,15 @@ async function hashAnswer(answer: string): Promise<string> {
 export const server = {
   createRound: defineAction({
     handler: async () => {
-      const pkgName = PACKAGES[Math.floor(Math.random() * PACKAGES.length)];
-      const tree = await buildDependencyTree(pkgName, "latest");
+      // biome-ignore lint/style/noNonNullAssertion: safe here
+      const pkgName = PACKAGES[Math.floor(Math.random() * PACKAGES.length)]!;
+      const { dependencies, size } = await buildDependencyTree(pkgName);
       const hash = await hashAnswer(pkgName);
 
-      return {
-        package: pkgName,
-        tree,
-        hash,
-      };
+      return { hash, tree: { dependencies }, size };
     },
   }),
+
   checkAnswer: defineAction({
     accept: "form",
     input: z.object({

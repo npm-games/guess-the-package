@@ -1,13 +1,12 @@
 import { actions } from "astro:actions";
 import { createSignal, Show } from "solid-js";
-import type { DependencyNode } from "#lib/npm";
-import DependencyGraph from "./DependencyGraph";
+import DependencyGraph, { type Tree } from "./DependencyGraph";
 
 type GameState = "loading" | "playing" | "correct" | "incorrect";
 
 function App() {
   const [gameState, setGameState] = createSignal<GameState>("loading");
-  const [tree, setTree] = createSignal<DependencyNode | null>(null);
+  const [tree, setTree] = createSignal<Tree | null>(null);
   const [hash, setHash] = createSignal("");
   const [result, setResult] = createSignal<{
     correct: boolean;
@@ -20,6 +19,7 @@ function App() {
     setResult(null);
     setGuess("");
     const { data, error } = await actions.createRound();
+    console.log(data);
     if (error || !data) {
       console.error(error);
       setGameState("loading");

@@ -18,13 +18,13 @@ export interface DependencyNode {
 interface NpmxResponse {
   package: string;
   version: string;
-  selfSize?: number;
-  totalSize?: number;
-  dependencyCount?: number;
-  dependencies?: {
+  selfSize: number;
+  totalSize: number;
+  dependencyCount: number;
+  dependencies: {
     name: string;
     version: string;
-    size?: number;
+    size: number;
   }[];
 }
 
@@ -54,29 +54,23 @@ async function fetchNpmx(name: string, version: string): Promise<NpmxResponse> {
 export async function buildDependencyTree(
   name: string,
   version?: string,
-  depth = 0,
-  maxDepth = 2,
 ): Promise<DependencyNode> {
+  console.log(`Building dependency tree for ${name}@${version ?? "latest"}`);
   const resolvedVersion = version ?? (await fetchLatestVersion(name));
   const data = await fetchNpmx(name, resolvedVersion);
 
   const node: DependencyNode = {
     name: data.package,
     version: data.version,
+    size: data.selfSize,
   };
-  if (data.selfSize !== undefined) node.size = data.selfSize;
 
-  if (depth < maxDepth && data.dependencies && data.dependencies.length > 0) {
+  if (data.dependencies.length > 0) {
     node.dependencies = [];
 
     for (const dep of data.dependencies) {
       try {
-        const depNode = await buildDependencyTree(
-          dep.name,
-          dep.version,
-          depth + 1,
-          maxDepth,
-        );
+        const depNode = await buildDependencyTree(dep.name, dep.version);
         node.dependencies.push(depNode);
       } catch {
         // skip failed deps

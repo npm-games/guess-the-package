@@ -2,7 +2,12 @@ import { type Component, For } from "solid-js";
 import type { DependencyNode } from "#lib/npm";
 
 interface Props {
-  tree: DependencyNode;
+  tree: Tree;
+}
+
+interface FlatTree {
+  size?: number;
+  children: TreeNode[];
 }
 
 interface TreeNode {
@@ -12,10 +17,13 @@ interface TreeNode {
   children: TreeNode[];
 }
 
-function flattenTree(node: DependencyNode): TreeNode {
-  const result: TreeNode = {
-    name: node.name,
-    version: node.version,
+export interface Tree {
+  size?: number;
+  dependencies?: DependencyNode[] | undefined;
+}
+
+function flattenTree(node: Tree): FlatTree {
+  const result: FlatTree = {
     children: [],
   };
   if (node.size !== undefined) result.size = node.size;
@@ -64,15 +72,6 @@ const DependencyGraph: Component<Props> = (props) => {
             stroke="#1d4ed8"
             stroke-width="1"
           />
-          <text
-            x="60"
-            y="25"
-            text-anchor="middle"
-            fill="white"
-            font-weight="bold"
-          >
-            {nodes().name}
-          </text>
           <For each={nodes().children}>
             {(child, i) => (
               <g transform={`translate(0, ${60 + i() * 50})`}>
