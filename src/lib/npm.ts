@@ -54,9 +54,21 @@ async function fetchNpmx(name: string, version: string): Promise<NpmxResponse> {
 export async function buildDependencyTree(
   name: string,
   version?: string,
+  fetched?: Map<string, DependencyNode>,
 ): Promise<DependencyNode> {
-  console.log(`Building dependency tree for ${name}@${version ?? "latest"}`);
+  if (!fetched) {
+    fetched = new Map();
+  }
+
   const resolvedVersion = version ?? (await fetchLatestVersion(name));
+  const cacheKey = `${name}@${resolvedVersion}`;
+
+  const cached = fetched.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  console.log(`Building dependency tree for ${name}@${resolvedVersion}`);
   const data = await fetchNpmx(name, resolvedVersion);
 
   const node: DependencyNode = {
@@ -65,12 +77,18 @@ export async function buildDependencyTree(
     size: data.selfSize,
   };
 
+  fetched.set(cacheKey, node);
+
   if (data.dependencies.length > 0) {
     node.dependencies = [];
 
     for (const dep of data.dependencies) {
       try {
-        const depNode = await buildDependencyTree(dep.name, dep.version);
+        const depNode = await buildDependencyTree(
+          dep.name,
+          dep.version,
+          fetched,
+        );
         node.dependencies.push(depNode);
       } catch {
         // skip failed deps
