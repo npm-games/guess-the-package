@@ -57,9 +57,9 @@ function App() {
         Can you identify the npm package from its dependency tree?
       </p>
 
-      {treeData && <DependencyGraph tree={treeData} />}
+      <Show when={tree()}>{(tree) => <DependencyGraph tree={tree()} />}</Show>
 
-      <Show when={gameState() === "playing" && treeData}>
+      <Show when={gameState() === "playing" && tree()}>
         <form class="mt-6" onSubmit={handleGuess}>
           <div class="flex gap-2">
             <input

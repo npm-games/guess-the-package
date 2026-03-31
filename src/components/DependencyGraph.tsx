@@ -1,20 +1,9 @@
-import { type Component, For } from "solid-js";
+import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
+import { type Component, createEffect, onCleanup, onMount } from "solid-js";
 import type { DependencyNode } from "#lib/npm";
 
 interface Props {
   tree: Tree;
-}
-
-interface FlatTree {
-  size?: number;
-  children: TreeNode[];
-}
-
-interface TreeNode {
-  name: string;
-  version: string;
-  size?: number;
-  children: TreeNode[];
 }
 
 export interface Tree {
@@ -22,86 +11,110 @@ export interface Tree {
   dependencies?: DependencyNode[] | undefined;
 }
 
-function flattenTree(node: Tree): FlatTree {
-  const result: FlatTree = {
-    children: [],
-  };
-  if (node.size !== undefined) result.size = node.size;
-  if (node.dependencies) {
-    result.children = Object.entries(node.dependencies).map(([name]) => ({
-      name,
-      version: "",
-      children: [],
-    }));
+function treeToElements(
+  node: DependencyNode | undefined,
+  parentId?: string,
+): ElementDefinition[] {
+  if (!node) return [];
+
+  const elements: ElementDefinition[] = [];
+
+  elements.push({
+    data: {
+      id: node.name,
+      label: node.name,
+      size: node.size,
+    },
+  });
+
+  if (parentId) {
+    elements.push({
+      data: {
+        source: parentId,
+        target: node.name,
+      },
+    });
   }
-  return result;
+
+  if (node.dependencies) {
+    for (const dep of node.dependencies) {
+      elements.push(...treeToElements(dep, node.name));
+    }
+  }
+
+  return elements;
 }
 
 const DependencyGraph: Component<Props> = (props) => {
-  const nodes = () => flattenTree(props.tree);
+  let containerRef: HTMLDivElement | undefined;
+  let cy: Core | undefined;
+
+  onMount(() => {
+    if (!containerRef) return;
+
+    cy = cytoscape({
+      container: containerRef,
+      style: [
+        {
+          selector: "node",
+          style: {
+            "background-color": "#3b82f6",
+            label: "data(label)",
+            color: "#374151",
+            "font-size": "10px",
+            "text-valign": "center",
+            "text-halign": "center",
+            width: 80,
+            height: 30,
+          },
+        },
+        {
+          selector: "edge",
+          style: {
+            width: 1,
+            "line-color": "#9ca3af",
+            "target-arrow-color": "#9ca3af",
+            "target-arrow-shape": "triangle",
+            "curve-style": "bezier",
+          },
+        },
+      ],
+      layout: { name: "breadthfirst" },
+      userPanningEnabled: true,
+      userZoomingEnabled: true,
+      boxSelectionEnabled: false,
+    });
+  });
+
+  createEffect(() => {
+    const tree = props.tree;
+    if (!cy || !tree?.dependencies) return;
+
+    const elements = treeToElements({
+      name: "root",
+      version: "",
+      dependencies: tree.dependencies,
+    });
+    cy.elements().remove();
+    cy.add(elements);
+    cy.layout({
+      name: "breadthfirst",
+      directed: true,
+      padding: 10,
+      animate: true,
+    }).run();
+  });
+
+  onCleanup(() => {
+    cy?.destroy();
+  });
 
   return (
-    <div class="border rounded p-4 bg-gray-50 overflow-auto max-h-96">
-      <svg
-        width="100%"
-        height="400"
-        class="font-mono text-xs"
-        role="img"
-        aria-label="Dependency graph"
-      >
-        <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="9"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
-          </marker>
-        </defs>
-        <g transform="translate(20, 30)">
-          <rect
-            x="0"
-            y="0"
-            width="120"
-            height="40"
-            rx="4"
-            fill="#3b82f6"
-            stroke="#1d4ed8"
-            stroke-width="1"
-          />
-          <For each={nodes().children}>
-            {(child, i) => (
-              <g transform={`translate(0, ${60 + i() * 50})`}>
-                <line
-                  x1="60"
-                  y1="0"
-                  x2="60"
-                  y2="20"
-                  stroke="#666"
-                  marker-end="url(#arrowhead)"
-                />
-                <rect
-                  x="0"
-                  y="20"
-                  width="120"
-                  height="30"
-                  rx="4"
-                  fill="#e5e7eb"
-                  stroke="#9ca3af"
-                  stroke-width="1"
-                />
-                <text x="60" y="40" text-anchor="middle" fill="#374151">
-                  {child.name}
-                </text>
-              </g>
-            )}
-          </For>
-        </g>
-      </svg>
-    </div>
+    <div
+      ref={containerRef}
+      class="border rounded p-4 bg-gray-50"
+      style={{ width: "100%", height: "400px" }}
+    />
   );
 };
 
