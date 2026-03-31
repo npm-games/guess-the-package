@@ -19,26 +19,22 @@ function treeToElements(
 
   const elements: ElementDefinition[] = [];
 
+  const id = `${node.name}@${node.version}`;
+
   elements.push({
-    data: {
-      id: node.name,
-      label: node.name,
-      size: node.size,
-    },
+    data: { id, label: id, size: node.size },
   });
 
   if (parentId) {
     elements.push({
-      data: {
-        source: parentId,
-        target: node.name,
-      },
+      data: { source: parentId, target: id },
     });
   }
 
   if (node.dependencies) {
     for (const dep of node.dependencies) {
-      elements.push(...treeToElements(dep, node.name));
+      const id = `${node.name}@${node.version}`;
+      elements.push(...treeToElements(dep, id));
     }
   }
 
@@ -91,8 +87,8 @@ const DependencyGraph: Component<Props> = (props) => {
     if (!cy || !tree?.dependencies) return;
 
     const elements = treeToElements({
-      name: "root",
-      version: "",
+      name: "???",
+      version: "?.?.?",
       dependencies: tree.dependencies,
     });
     cy.elements().remove();
